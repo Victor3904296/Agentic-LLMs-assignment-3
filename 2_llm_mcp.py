@@ -11,17 +11,37 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classifica
 import json
 import re
 
+import os
+from google import genai
+from google.genai import types
+
 warnings.filterwarnings("ignore")
+
+client = genai.Client(api_key=os.environ['GEMINI_API_KEY'])
 
 def call_llm_fn(prompt: str) -> str:
     # Replace with your actual OpenAI/LLM client call.
     # Must return raw text from the model. This is just a placeholder (that allows you to run the code).
-    return """{
-  "routes": ["diabetes", "heart"],
-  "primary": "heart",
-  "confidence": {"diabetes": 0.35, "heart": 0.72, "breast_cancer": 0.05},
-  "notes": "Brief triage rationale."
-}"""
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.0,
+                response_mime_type="application/json",
+            ),
+        )
+        return response.text
+    except Exception as e:
+        print(f"Gemini call failed: {e}")
+        return '{"routes": [], "primary": null, "confidence": {}, "notes": "API error fallback"}'
+#     return """{
+#   "routes": ["diabetes", "heart"],
+#   "primary": "heart",
+#   "confidence": {"diabetes": 0.35, "heart": 0.72, "breast_cancer": 0.05},
+#   "notes": "Brief triage rationale."
+# }"""
 
 
 def make_case_text(pid, d_row, b_row, h_row):

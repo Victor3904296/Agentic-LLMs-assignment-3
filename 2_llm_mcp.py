@@ -104,17 +104,41 @@ class LLMPlannerAgent(BaseAgent):
             pid, payload = case  # payload is dict with data per domain + text
             prompt = payload["text"]
 
-            # Call LLM and parse response
+            try:
+                # Call LLM and parse response
+                response_text = call_llm_fn(prompt)
 
-            # store triage decision in model context
-            # self.model.triage_log.append({
-            #         "PatientID": pid,
-            #         "routes": routes,
-            #         "primary": primary_decision,
-            #         "labels": payload["labels"]
-            #     })
+                response = self._extract_json(response_text)
+                routes = response["routes"]
+                if not routes:
+                    remaining.append(case)
+                    continue
+                primary_decision = response["primary"]
 
-            # Route to appropriate executors based on LLM decision
+                # store triage decision in model context
+                self.model.triage_log.append({
+                        "PatientID": pid,
+                        "routes": routes,
+                        "primary": primary_decision,
+                        "labels": payload["labels"]
+                    })
+
+                # Route to appropriate executors based on LLM decision
+                for route in routes:
+                    if route in payload["data"]:
+                        task_id = f"task_{route}_{pid}"
+                        task = {
+                            "id": pid,
+                            "description": f"Analyze {route} data",
+                            "data": payload["data"][route],
+                            "y_true": int(payload["labels"][route])
+                        }
+                        self.model.context[task_id] = task
+                        print(f"[{self.role}] Planned task {task_id} (Primary: {primary_decision})")
+
+            except Exception as e:
+                print(f"[{self.role}] Failed to process patient {pid}, due to {e}")
+                remaining.append(case)
 
         self.model.case_queue = remaining
 

@@ -12,29 +12,32 @@ import json
 import re
 
 import os
-from google import genai
-from google.genai import types
+from openai import OpenAI
 
 warnings.filterwarnings("ignore")
 
-client = genai.Client(api_key=os.environ['GEMINI_API_KEY'])
+if "OPENROUTER_API_KEY" not in os.environ:
+    os.environ["OPENROUTER_API_KEY"] = input("enter OpenRouter API key: ")
+
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ["OPENROUTER_API_KEY"],
+)
 
 def call_llm_fn(prompt: str) -> str:
     # Replace with your actual OpenAI/LLM client call.
     # Must return raw text from the model. This is just a placeholder (that allows you to run the code).
 
     try:
-        response = client.models.generate_content(
-            model="gemini-3.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.0,
-                response_mime_type="application/json",
-            ),
+        response = client.chat.completions.create(
+            model = "...", # add a model from OpenRouter here
+            messages = [{"role": "user", "content": prompt}],
+            temperature = 0,
+            response_format = {"type": "json_object"},
         )
-        return response.text
+        return response.choices[0].message.content
     except Exception as e:
-        print(f"Gemini call failed: {e}")
+        print(f"OpenRouter call failed: {e}")
         return '{"routes": [], "primary": null, "confidence": {}, "notes": "API error fallback"}'
 #     return """{
 #   "routes": ["diabetes", "heart"],
@@ -290,6 +293,11 @@ X_h, y_h = heart.drop("target", axis=1), heart["target"]
 clf_diabetes = joblib.load("model/diabetes.pkl")
 clf_breast = joblib.load("model/breast.pkl")
 clf_heart = joblib.load("model/heart.pkl")
+
+# test lines, remove if everything works. exception in call_llm_fn doesnt pause simulation so could waste credits
+print("testing if the OpenRouter call works")
+print(call_llm_fn('reply with JSON: {"ok": true}')) 
+input("test done, enter to start the simulation or ctrl+C to stop.") 
 
 
 model = MCPMesaModel(X_d, X_b, X_h, clf_diabetes, clf_breast, clf_heart)

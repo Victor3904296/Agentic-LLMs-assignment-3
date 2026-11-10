@@ -296,8 +296,8 @@ clf_heart = joblib.load("model/heart.pkl")
 
 # test lines, remove if everything works. exception in call_llm_fn doesnt pause simulation so could waste credits
 print("testing if the OpenRouter call works")
-print(call_llm_fn('reply with JSON: {"ok": true}')) 
-input("test done, enter to start the simulation or ctrl+C to stop.") 
+print(call_llm_fn('reply with JSON: {"ok": true}'))
+input("test done, enter to start the simulation or ctrl+C to stop.")
 
 
 model = MCPMesaModel(X_d, X_b, X_h, clf_diabetes, clf_breast, clf_heart)
@@ -316,11 +316,60 @@ results_df = pd.DataFrame(model.results)
 print("Results Collected:", len(results_df))
 print(results_df.head())
 
+if not results_df.empty and "Disease" in results_df.columns and "y_pred" in results_df.columns:
+    plt.figure(figsize=(10, 6))
+    sns.countplot(data=results_df, x="Disease", hue="y_pred")
+    plt.title("Predictions by Disease Type")
+    plt.ylabel("Number of Cases")
+    plt.xlabel("Disease")
+    plt.legend(title="Prediction", labels=["Negative", "Positive"])
+    plt.tight_layout()
+    plt.savefig("results/output_llm.png")
+else:
+    print("No results to display.")
 
+for disease in results_df["Disease"].unique():
+    sub = results_df[results_df["Disease"] == disease].dropna(subset=["y_true", "y_pred"])
+    if sub.empty:
+        print(f"\n--- {disease}: no labeled results ---")
+        continue
 
+    y_true = sub["y_true"].astype(int).values
+    y_pred = sub["y_pred"].astype(int).values
+
+    print(f"\n=== {disease} ===")
+    print(classification_report(y_true, y_pred, digits=3))
+
+    cm = confusion_matrix(y_true, y_pred)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+    disp.plot()
+    plt.title(f"Confusion matrix: {disease}")
+    plt.tight_layout()
+    plt.savefig(f"results/confusion_{disease}_llm.png")
+    plt.close()
 
 # Analyse the triage performance
 
 triage_df = pd.DataFrame(model.triage_log)
 print("Triage Collected:", len(triage_df))
 print(triage_df.head())
+
+if not triage_df.empty:
+    for disease in ['diabetes', 'breast_cancer', 'heart']:
+        y_true_triage = []
+        y_pred_triage = []
+
+        for _, row in triage_df.iterrows():
+            labels = row['labels']
+            routes = row['routes']
+
+            truth = int(labels.get(disease, 0))
+            pred = 1 if disease in routes else 0
+
+            y_true_triage.append(truth)
+            y_pred_triage.append(pred)
+
+        print(f"\n=== Triage: {disease} ===")
+        print(classification_report(y_true_triage, y_pred_triage, digits=3))
+else:
+    print("No triage logs available")

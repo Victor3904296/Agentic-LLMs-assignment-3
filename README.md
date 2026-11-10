@@ -11,8 +11,8 @@ python -m venv .venv
 pip install -r requirements.txt
 ````
 
-## Train executor models
-Before running the simulation, train the classifiers used by the executor agents.
+## Executor models
+The executor classifier models have already been trained and are in the submission. They can be found in the model folder. However, if you would like to train them again before running the simulation (optional), then they can be trained using the following command:
 
 ```bash
 python 0_train_models.py

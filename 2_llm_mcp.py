@@ -30,7 +30,7 @@ def call_llm_fn(prompt: str) -> str:
 
     try:
         response = client.chat.completions.create(
-            model = "...", # add a model from OpenRouter here
+            model = "anthropic/claude-haiku-5.5", 
             messages = [{"role": "user", "content": prompt}],
             temperature = 0,
             response_format = {"type": "json_object"},
@@ -294,11 +294,6 @@ clf_diabetes = joblib.load("model/diabetes.pkl")
 clf_breast = joblib.load("model/breast.pkl")
 clf_heart = joblib.load("model/heart.pkl")
 
-# test lines, remove if everything works. exception in call_llm_fn doesnt pause simulation so could waste credits
-print("testing if the OpenRouter call works")
-print(call_llm_fn('reply with JSON: {"ok": true}'))
-input("test done, enter to start the simulation or ctrl+C to stop.")
-
 
 model = MCPMesaModel(X_d, X_b, X_h, clf_diabetes, clf_breast, clf_heart)
 
@@ -371,5 +366,6 @@ if not triage_df.empty:
 
         print(f"\n=== Triage: {disease} ===")
         print(classification_report(y_true_triage, y_pred_triage, digits=3))
+        pd.DataFrame(classification_report(y_true_triage, y_pred_triage, output_dict=True)).T.round(3).to_csv(f"results/triage_report_{disease}.csv")
 else:
     print("No triage logs available")

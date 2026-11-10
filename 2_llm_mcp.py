@@ -25,9 +25,7 @@ client = OpenAI(
 )
 
 def call_llm_fn(prompt: str) -> str:
-    # Replace with your actual OpenAI/LLM client call.
-    # Must return raw text from the model. This is just a placeholder (that allows you to run the code).
-
+    # perform Claude Haiku call
     try:
         response = client.chat.completions.create(
             model = "anthropic/claude-haiku-5.5", 
@@ -39,12 +37,6 @@ def call_llm_fn(prompt: str) -> str:
     except Exception as e:
         print(f"OpenRouter call failed: {e}")
         return '{"routes": [], "primary": null, "confidence": {}, "notes": "API error fallback"}'
-#     return """{
-#   "routes": ["diabetes", "heart"],
-#   "primary": "heart",
-#   "confidence": {"diabetes": 0.35, "heart": 0.72, "breast_cancer": 0.05},
-#   "notes": "Brief triage rationale."
-# }"""
 
 
 def make_case_text(pid, d_row, b_row, h_row):
@@ -132,6 +124,8 @@ class LLMPlannerAgent(BaseAgent):
                 response_text = call_llm_fn(prompt)
 
                 response = self._extract_json(response_text)
+
+                # check response for given routes
                 routes = response["routes"]
                 if not routes:
                     remaining.append(case)
